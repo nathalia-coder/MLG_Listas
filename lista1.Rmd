@@ -41,3 +41,74 @@ df <- data.frame(
 df
 ```
 
+**a)**
+
+```{r}
+x <- df %>% select(legrep, optime) %>% 
+  mutate(aux = 1) %>% 
+  pivot_wider(names_from = legrep,
+              names_prefix = "legrep_",
+              values_from = aux,
+              values_fill = 0)
+  
+x
+```
+
+**b)**
+
+```{r}
+# ambas formas dao o mesmo
+fit_teste <- lm(formula = df$valor ~ legrep + optime, data = x)
+
+fit <- lm(formula = valor ~ legrep + optime, data = df)
+```
+
+```{r}
+resposta = fit %>% coefficients() %>% cbind()
+colnames(resposta) <- "Coeficientes"
+row.names(resposta) <- c("b0","b1","b2")
+resposta
+```
+
+**c)**
+
+Sim, todas variáveis explicativas são significativas pois $p-valor < \alpha = 0,05$ para todo p-valor encontrado. 
+
+```{r}
+resumo <- summary(fit)
+resumo$coefficients[,4]
+```
+
+**d)**
+
+```{r}
+fit %>% fitted()
+```
+
+**e)**
+
+Sobre a hipótese nula de que os dados seguem distribuição normal contra a hipótese alternativa que os dados não seguem distribuição normal, dado um $p-valor > \alpha = 0,05$, não rejeita-se $H_0$, logo, há evidências que os resíduos seguem distribuição normal.
+
+```{r}
+fit %>% residuals() %>% shapiro.test()
+```
+
+**f)**
+
+```{r}
+X <- x %>% as.matrix()
+t(X) %*% X %>% # transposta * matriz normal
+  solve()      # inversa da matriz
+
+```
+
+**g)**
+
+```{r}
+r2_adj <- resumo$adj.r.squared
+```
+
+
+Dado um $R^2 = $ `r r2_adj * 100 %>% round(2)`, conclui-se que o modelo ficou muito bem ajustado para esse conjunto de dados.
+
+
