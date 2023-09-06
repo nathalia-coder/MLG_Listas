@@ -1,2 +1,9 @@
-# MLG_Listas
-Resoluções das listas de exercícios da disciplina de Modelos Lineares Generalizados
+# Resoluções das Listas
+
+- Exercícios da disciplina de **Modelos Lineares Generalizados**
+
+- Universidade Federal de Minas Gerais - UFMG
+
+- Aluna: Nathalia Santos
+
+- Semestre letivo: 2023/2
