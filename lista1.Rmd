@@ -1,0 +1,43 @@
+---
+title: "Resolução Lista I"
+author: "Nathalia Gabriella Ferreira dos Santos"
+date: "`r Sys.Date()`"
+output: pdf_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Pacotes
+
+```{r message=TRUE, warning=TRUE}
+library(tidyverse)
+```
+
+# Questão 1
+
+**Enunciado:**
+
+Considere o conjunto de dados abaixo referente a um valor mínimo pago de seguros individuais
+(em dólares americanos) por danos com acidentes pessoais. Além do valor pago ao segurado,
+serão consideradas as seguintes variáveis explicativas: 
+
+* *legrep:* representação legal (não ou sim)
+
+* *optime:* tempo operacional (em horas) para pagamento do seguro.
+
+```{r}
+rm(list = ls())
+
+df <- data.frame(
+  valor = c(9.17,6.79,16.64,8.81,15.86,10.07,12.69,6.91,5.43,10.88,8.37,11.9,16.12,8.74,9.35),
+  legrep = c("nao","nao","nao","nao","sim","nao","sim","nao","nao","sim","nao","sim","sim","nao","nao"),
+  optime = c(18.2,13.1,32.9,17.4,29.5,19.5,22.7,13.3,10.5,19.6,16.3,21.2,29.7,17,18.3)
+) %>% as_tibble()
+
+df
+```
+
