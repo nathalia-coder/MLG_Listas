@@ -1,0 +1,253 @@
+---
+title: "Resolução Lista II"
+subtitle: "Modelos Lineares Generalizados"
+author: "Nathalia Gabriella Ferreira dos Santos"
+date: "10/28/2023"
+format:
+  pdf:
+    toc: true
+    documentclass: report
+editor: visual
+lang: pt
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r config_inicial, echo=FALSE}
+knitr::opts_chunk$set(
+  warning = FALSE,
+  message = FALSE
+  )
+```
+
+# 1)
+
+```{r bibliotecas}
+library(tidyverse)
+rm(list = ls())
+```
+
+## b)
+
+```{r}
+y <- c(1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1)
+
+theta <- seq(0,1,0.01)
+n <- length(y)
+sy <- sum(y) # soma de y
+
+# Verossimilhanca
+fv <- theta^sy * (1-theta)^(n - sy)
+maximo <- theta[fv == max(fv)]
+plot(theta, fv, type = "line", main = "Gráfico Verossimilhança")
+abline(v = maximo, col = 'red', lty = 2)
+```
+
+## c)
+
+```{r}
+# Log-Verossimilhanca
+flv <- sy*log(theta) + (n - sy)*log(1-theta)
+maximo <- theta[flv == max(flv)]
+plot(theta, flv, type = "line", main = "Gráfico Log-Verossimilhança")
+abline(v = maximo, col = 'red', lty = 2)
+
+paste0("Valor do máximo: ", maximo)
+```
+
+## d)
+
+```{r}
+loglik <- function(theta, y){
+  n <- length(y)
+  sy <- sum(y)
+  log_ver <- sy*log(theta) + (n - sy)*log(1-theta)
+  return(log_ver)
+}
+
+theta0 <- 0.5 
+ajuste <- optim(par = theta0,# chute inicial
+                fn = loglik, # funcao a ser otimizada
+                y = y, # parametro da funcao
+                lower = 0.0001, upper = 0.9999, # limites para o parametro
+                method = "L-BFGS-B", control = list(fnscale = -1), hessian = F) # metodo e maximizacao
+ajuste$par %>% round(3)
+```
+
+# 2)
+
+$Y_i ∼ Poisson(\theta_i), \theta_i > 0$
+
+```{r}
+rm(list = ls())
+
+y <- c(7, 2, 24, 33, 2, 5, 2, 5, 8, 8, 16, 20, 11, 4, 37, 1, 8, 8, 5, 7, 5, 4, 4, 2, 26)
+x1 <- c(-0.27, 0.57, -0.74, -0.94, 0.64, 0.86, 0.5, 0.12, -0.36, 0.12, -0.55, -0.81, -0.21, 0.53, -1, 0.4, -0.07, 0.15, -0.13, 0.22, 0.96, 0.45, -0.06, 0.97, -0.71)
+
+n = length(y)
+```
+
+## a)
+
+::: callout-tip
+## Dica:
+
+Olhar página 63 do slide 3
+:::
+
+$\eta_i = \beta_0 + \beta_1X_{1i}$
+
+$\theta_i = e^{\eta_i}$
+
+```{r}
+bet <- c(1,1) #chute inicial
+w <- numeric(0)
+z <- numeric(0)
+for (i in 1:n) {
+  eta <- bet[1] + bet[2]*x1[i]
+  w[i] <- exp(eta)  
+  z[i] <- eta + y[i]*exp(-eta)-1 
+}
+
+w = diag(w) # w eh uma matriz diagonal
+w[1:5,1:5]
+```
+
+## b)
+
+```{r}
+z
+```
+
+## c)
+
+```{r}
+X <- cbind(rep(1,n) , x1)
+beta_r_1 <- solve( t(X) %*% w %*% X) %*% t(X) %*% w %*% z
+beta_r_1
+```
+
+## d)
+
+```{r}
+mod <- glm(formula = y ~ x1, family = poisson(link = "log"), start = bet)
+resumo <- mod %>% summary()
+resumo
+```
+
+```{r auxiliar}
+#| include: FALSE
+coef <- resumo$coefficients[,1] %>% round(2)
+pvalor <- resumo$coefficients[,4]
+deviance_mod <- resumo$deviance %>% round(2)
+```
+
+Nota-se que:
+
+-   *Intercepto* tem coeficiente estimado em `r coef[1]` e é significativo pois possui p-valor de `r pvalor[1]` $< \alpha = 0,05$.
+
+-   *x1* tem coeficiente estimado em `r coef[2]` e é significativo pois possui p-valor de `r pvalor[2]` $< \alpha = 0,05$.
+
+## e)
+
+::: callout-tip
+## Dica:
+
+Página 17 do slide 4
+:::
+
+```{r}
+beta0_chapeu = coef[1]
+beta1_chapeu = coef[2]
+mu = exp(beta0_chapeu + beta1_chapeu*x1)
+de = 2*sum(y*log(y/mu)-(y-mu))
+de # mesmo da saida do summary
+
+p <- 2 # numero de betas estimados
+cbind(
+  list(
+    "Ponto crítico a 95%= " = qchisq(0.95, n-p) %>% round(2),
+    "Ponto crítico a 99%= " = qchisq(0.99, n-p) %>% round(2)))
+```
+
+Como a Deviance Residual do modelo $(D_{modelo} =$ `r deviance_mod`$)$ foi menor que ambos limiares de comparação de deviance achados acimda, o ajuste pode ser considerado ok. Ou seja, nem é saturado nem não significativo.
+
+## f)
+
+```{r}
+x2p.1 = sum( ((y-mu)^2)/mu )
+rp = residuals(mod, type = "pearson") # residuo de pearson
+x2p.2 = sum(rp^2)
+cbind(x2p.1,x2p.2)
+1-pchisq(x2p.1, n-p)
+```
+
+Nesse caso temos um bom ajuste pois o $pvalor > 0,05$ indica que o valor dos resíduos de pearson está abaixo do limiar. O limiar é o mesmo obtido anteriormente.
+
+# 3)
+
+Trata-se de um **Modelo Binomial** pois a variável resposta é binária (morrer ou não). E como há quantidade limitada na caixa, não é poisson pois há um limite máximo de mortes para cada caixa, o que viola o pressuposto da poisson $(\theta_i > 0)$.
+
+```{r}
+rm(list = ls())
+dados <- read.table("dados_Q3_L2_MLG.txt", col.names = c("y", "x1", "x2")) %>% as_tibble()
+```
+
+## a)
+
+```{r}
+m <- 10 #numero de larvas por recipiente 
+m1 <- glm(cbind(y,m-y)~x1+x2, family=binomial(link="logit"), data = dados)
+resumo <- summary(m1)
+resumo
+```
+
+```{r auxiliar3}
+#| include: FALSE
+coef <- resumo$coefficients[,1] %>% round(2)
+pvalor <- resumo$coefficients[,4] %>% round(4)
+deviance_mod <- resumo$deviance %>% round(2)
+```
+
+Nota-se que:
+
+-   *Intercepto* tem coeficiente estimado em `r coef[1]` e é significativo pois possui p-valor de `r pvalor[1]` $< \alpha = 0,05$.
+
+-   *x1* tem coeficiente estimado em `r coef[2]` e é significativo pois possui p-valor de `r pvalor[2]` $< \alpha = 0,05$.
+
+-   *x2* tem coeficiente estimado em `r coef[3]` e não é significativo pois possui p-valor de `r pvalor[3]` $> \alpha = 0,05$.
+
+## b)
+
+-   Geral: $ods = 100 \cdot ( exp^{\beta_1X_{1i}} - 1)$
+
+Quando x1 é aumentado em 0.1 unidade, a razão de chance é variada em $ods = 100 \cdot ( exp^{1,54 \cdot 0,1} - 1)$. Logo $ods=$ `r paste0(100*(exp(1.54*0.1)-1) %>% round(4),"%")`.
+
+## c)
+
+```{r}
+plot(
+  residuals(m1, type = "pearson"), 
+  m1$fitted.values, 
+  main = "Resíduo de Pearson vs Valores Ajustados")
+```
+
+```{r}
+plot(
+  residuals(m1, type = "deviance"), 
+  m1$fitted.values, 
+  main = "“Resíduos componente do desvio vs Valores Ajustados")
+```
+
+## d)
+
+```{r}
+data.frame(Recipiente = dados$y, 
+           ProbMorte = m1$fitted.values %>% round(2))
+```
+
+```{r}
+plot(dados$x1, m1$fitted.values, main = "X1 vs. probabilidade de morte")
+plot(dados$x2, m1$fitted.values, main = "X2 vs. probabilidade de morte")
+```
+
