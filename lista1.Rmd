@@ -17,7 +17,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 ```
 
-# Questão 1
+# Questão 1 - Lista Antiga
 
 **Enunciado:**
 
@@ -44,22 +44,25 @@ df
 **a)**
 
 ```{r}
-x <- df %>% select(legrep, optime) %>% 
-  mutate(aux = 1) %>% 
+x <- df %>%
+  mutate(intercepto = 1,
+         aux = 1) %>% 
   pivot_wider(names_from = legrep,
               names_prefix = "legrep_",
               values_from = aux,
-              values_fill = 0)
+              values_fill = 0) %>% 
+  select(intercepto, legrep_sim, optime)
   
 x
+
+# resultado bate com original
+#fit %>% 
+#  model.matrix()
 ```
 
 **b)**
 
 ```{r}
-# ambas formas dao o mesmo
-fit_teste <- lm(formula = df$valor ~ legrep + optime, data = x)
-
 fit <- lm(formula = valor ~ legrep + optime, data = df)
 ```
 
@@ -95,12 +98,23 @@ fit %>% residuals() %>% shapiro.test()
 
 **f)**
 
+Matriz:
+
 ```{r}
 X <- x %>% as.matrix()
-t(X) %*% X %>% # transposta * matriz normal
+C <- t(X) %*% X %>% # transposta * matriz normal
   solve()      # inversa da matriz
 
+C
 ```
+
+Var(Bk)
+
+```{r}
+sigma2 <- 0.2
+diag(C)*sigma2
+```
+
 
 **g)**
 
@@ -109,6 +123,171 @@ r2_adj <- resumo$adj.r.squared
 ```
 
 
-Dado um $R^2 = $ `r r2_adj * 100 %>% round(2)`, conclui-se que o modelo ficou muito bem ajustado para esse conjunto de dados.
+Dado um $R^2 =$ `r r2_adj * 100 %>% round(2)`, conclui-se que o modelo ficou muito bem ajustado para esse conjunto de dados.
 
+# Lista atualizada 2023
+
+# Questão 1
+
+```{r}
+rm(list = ls())
+```
+
+```{r}
+df <- tibble(
+  fluxo = c(2.38, 0.62, 2.86, 4.53, 3.74, 2.03, 5.53, 5.72, 6.00, 3.53, 4.25, 0.03, 1.15, 3.04, 1.35, 4.74, 4.80, 5.90, 2.79, 2.51),
+  pressao = c(4.65, 3.87, 5.92, 5.67, 4.53, 4.24, 4.73, 2.19, 4.91, 4.83, 7.08, 4.92, 3.94, 3.68, 4.20, 4.93, 5.19, 6.98, 4.42, 4.22),
+  tipo = c("A", "B", "B", "B", "A", "B", "A", "A", "A", "A", "B", "B", "B", "A", "B", "A", "A", "A", "B", "A")
+)
+
+df %>% head()
+```
+
+## a)
+
+```{r}
+x <- df %>%
+  mutate(intercepto = 1,
+         aux = 1) %>% 
+  pivot_wider(names_from = tipo,
+              names_prefix = "tipo_",
+              values_from = aux,
+              values_fill = 0) %>% 
+  select(intercepto, pressao, tipo_B)
+  
+x
+```
+
+## b)
+
+```{r}
+df$fluxo %>% shapiro.test()
+```
+
+Sobre a hipótese nula de que os dados seguem distribuição normal contra a hipótese alternativa que os dados não seguem distribuição normal, dado um $p-valor > \alpha = 0,05$, não rejeita-se $H_0$, logo, há evidências que os resíduos seguem distribuição normal.
+
+## c)
+
+```{r}
+X <- x %>% as.matrix()
+prod_x <- t(X) %*% X # transposta * matriz normal
+```
+
+* Tem na diagonal principal as somas dos quadrados dos elementos das colunas de X
+
+```{r}
+prod_x %>% diag()
+
+X^2 %>% colSums()
+```
+
+## d)
+
+```{r}
+B = prod_x %>% solve %*% t(X) %*% df$fluxo
+B
+
+fit <- lm(formula = fluxo ~ pressao + tipo, data = df)
+fit %>% coefficients() %>% cbind()
+```
+
+## e)
+
+```{r}
+res <- fit$residuals
+n = nrow(df)
+k = ncol(df)
+
+sigma_2_chapeu <- sum(res^2) / (n - k - 1)
+sigma_2_chapeu
+
+resumo$sigma
+```
+
+
+## f)
+
+```{r}
+resumo <- fit %>% summary()
+resumo
+
+pvalores <- resumo$coefficients[,4]
+```
+
+
+
+Os coeficientes significativos são:
+
+- Pressão, para um $p-valor =$ `r pvalores[2] %>% round(3)` $ < \alpha = 0,10$
+
+- Tipo, pois, sob a hipótese nula de que nenhum nível de "Tipo" seja significativo para o modelo contra a hipótese alternativa de que pelo menos um seja, como o tipo_B apresentou um $p-valor =$ `r pvalores[3] %>% round(3)` $ < \alpha = 0,05$, rejeita-se $H_0$ e a covariável torna-se significativa.
+
+## g)
+
+```{r}
+coef <- fit %>% coefficients()
+coef
+```
+
+- Pressão: a cada uma unidade aumentada na pressão, em média o fluxo aumenta em `r coef[2] %>% round(2)` unidades.
+
+- TipoB: quando passa do nível A para o nível B, em média o fluxo decresce em `r coef[3] %>% round(2) %>% abs()` unidades
+
+## h)
+
+Dado um $R_{Ajustado}^2 = $ `r resumo$adj.r.squared %>% round(3)`, tem-se que as covariáveis explicam a variabilidade do fluxo em aproximadamente `r paste0(resumo$adj.r.squared %>% round(3)*100,"%")`.
+
+## i)
+
+```{r}
+prod_x_in <- prod_x %>% solve()
+H <- X %*% prod_x_in %*% t(X)
+H <- H %>% round(2) 
+H %>%  head(3)
+```
+
+* Simetrica
+
+```{r}
+H == t(H)
+```
+
+
+* Indepotente
+
+```{r}
+H%*%H == H
+```
+
+
+## j)
+
+* Resíduos contra valores ajustados $\hat{Y}$:
+
+Nota-se um comportamento aleatório entre os pontos, o que direciona a confirmar a homocedasticidade dos resíduos.
+
+```{r}
+plot(
+  fit$residuals,
+  fit$fitted.values
+  )
+```
+
+* Resíduos contra a covariável $X_1$:
+
+```{r}
+plot(
+  fit$residuals,
+  df$pressao
+  )
+```
+
+
+## Studentizados
+
+```{r}
+ni <- seq(-5,5, 0.01) # preditor linear
+#logit <- 
+
+```
 
