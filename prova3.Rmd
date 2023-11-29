@@ -1,0 +1,180 @@
+---
+title: "Prova3"
+author: "Nathalia Gabriella Ferreira dos Santos; Bárbara"
+date: "`r Sys.Date()`"
+output: pdf_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+```
+
+
+```{r}
+rm(list = ls())
+df <- read.table("Dados_Avaliacao/dados_01_Prova3.txt", 
+                 col.names = c("y", "x1", "x2", "x3", "x4", "x5", "x6")) %>% as_tibble()
+
+df <- df %>% 
+  mutate(y = as.factor(y),
+         x6 = as.factor(x6))
+
+df %>% glimpse()
+```
+
+# 1)
+
+```{r}
+fit <- glm(formula = y ~ x1+x2+x3+x4+x5+x6, family = binomial(link = "logit"), data = df)
+fit %>% summary
+
+unidade <- 0.1
+100*(exp(coef(fit)*unidade) -1) %>% round(4)
+```
+
+# 2)
+
+```{r}
+vetor_resposta <- c(1, 0.1, 0.2, 0.6, 0.7, 0.3, 0)
+eta <- sum( coef(fit) * vetor_resposta) %>% round(3)
+theta <- 1/(1 + exp(-eta))
+theta
+
+predict(object = fit, 
+        newdata = list("x1"=.1,"x2"=.2,"x3"=.6,"x4"=0.7,"x5"=.3,"x6"="0"), 
+        type = "response")
+```
+# 3)
+```{r}
+n = nrow(df)
+CD = cooks.distance(fit); # Obtendo as distancias de Cook para cada i.
+influentes <- CD[CD > 4/n]
+n_influentes <- length(influentes)
+n_influentes
+```
+# 4)
+```{r}
+h = hatvalues(fit)
+mat_chap <- h[h > 2*length(coef(fit))/n]
+mat_chap[mat_chap == max(mat_chap)]
+```
+# 5)
+```{r}
+corte = 232
+train <- df[1:corte,]
+test <- df[(corte+1):n,]
+ytest <- test %>% dplyr::select(y)
+xtest <- test %>% dplyr::select(-y)
+
+fit <- glm(formula = y ~ x1+x2+x3+x4+x5+x6, family = binomial(link = "logit"), data = train)
+
+data_prev <- tibble(
+  id = (corte+1):n,
+  prob = predict(fit, newdata = xtest, type = "response"),
+  eta = predict(fit, newdata = xtest),
+  theta = 1/(1+exp(-eta)),
+  y = ytest %>% pull(y)
+  )
+data_prev %>% filter(id == 250)
+```
+# 6)
+```{r}
+limiar <- 0.5
+data_resposta <- data_prev %>% mutate(yhat = ifelse(prob > limiar, 1, 0))
+
+tab <- table(data_resposta$y, data_resposta$yhat)
+sensibilidade <- tab[4] / (tab[2] + tab[4]) # proporcao de verdadeiros positivos sobre todos positivos
+sensibilidade %>% round(4)
+```
+# 7)
+```{r}
+rm(list = ls())
+df <- read.table("Dados_Avaliacao/dados_02_Prova3.txt", 
+                 col.names = c("y", "x1", "x2", "x3")) %>% as_tibble()
+
+df %>% glimpse()
+```
+
+```{r}
+fit <- glm(formula = y ~ x1+x2+x3, family = poisson(link = "log"), data = df)
+
+unidade <- 0.1
+100*(exp(coef(fit)*unidade) -1) %>% round(4)
+```
+
+# 8)
+```{r}
+vetor_resposta <- c(1, .5, .5, 0.5)
+eta <- sum( coef(fit) * vetor_resposta) %>% round(3)
+theta <- exp(eta)
+theta
+
+predict(object = fit, 
+        newdata = list("x1"=0.5,"x2"=0.5,"x3"=0.5), 
+        type = "response")
+```
+# 9)
+```{r}
+library(MASS)
+
+fit1 = glm.nb(y ~ ., link = "log", data = df)
+
+# I
+cbind(
+  Poisson = coef(fit),
+  NegBin = coef(fit1)
+) %>% round(3)
+
+# II
+confint(fit)
+confint(fit1)
+
+# III
+cbind(
+  poisson = abs( fit$deviance - fit$df.residual),
+  negbin = abs( fit1$deviance - fit1$df.residual)
+)
+
+# IV
+AIC(fit, fit1)
+```
+# 11)
+```{r}
+rm(list = ls())
+df <- read.table("Dados_Avaliacao/dados_03_Prova3.txt", 
+                 col.names = c("y", "x1", "x2", "x3", "x4")) %>% as_tibble()
+
+df %>% glimpse()
+```
+
+```{r}
+fit <- glm(formula = y ~ ., family = Gamma(link = "log"), data = df)
+resumo <- fit %>% summary()
+fi <- resumo$dispersion
+alpha <- 1/fi
+alpha
+```
+
+# 12)
+```{r}
+vetor_resposta <- c(1, 0.5, 0.5, 1.2, 0.8)
+eta <- sum( coef(fit) * vetor_resposta) %>% round(3)
+theta <- exp(eta)
+theta
+
+predict(object = fit, 
+        newdata = list("x1"=0.5,"x2"=0.5,"x3"=1.2,"x4"=0.8), 
+        type = "response")
+```
+# 13)
+```{r}
+dev_esc <- resumo$deviance / fi
+dev_esc %>% round(3)
+```
+

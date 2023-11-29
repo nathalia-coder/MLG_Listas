@@ -236,7 +236,7 @@ plot(
 plot(
   residuals(m1, type = "deviance"), 
   m1$fitted.values, 
-  main = "“Resíduos componente do desvio vs Valores Ajustados")
+  main = "Resíduos componente do desvio vs Valores Ajustados")
 ```
 
 ## d)
